@@ -1,9 +1,3 @@
-// #include<vector>
-// #include "Rcpp.h"
-// #include<vector>
-// #include<numeric>
-// #include <R.h>
-// #include "Rmath.h"
 #include<Rcpp.h>
 #include<Rinternals.h>
 #include "filterIntervals.h"
@@ -84,3 +78,29 @@ Rcpp::DataFrame createErrorReturnList(){
     Rcpp::DataFrame errorDf = Rcpp::DataFrame::create(Rcpp::Named("message")="An error occurred while runnig FastCMH - no output. An error message should have been displayed, and the error probably occurred while reading in the input");
     return(errorDf);
 } 
+
+
+//used to test filtering
+// [[Rcpp::export]]
+Rcpp::DataFrame cpp_test_filtering(const Rcpp::DataFrame& dfInput){
+    vector<long long> tau;
+    tau.clear();
+    vector<long long> l;
+    l.clear();
+    vector<double> pvalue;
+    pvalue.clear();
+
+    Rcpp::IntegerVector tauR = dfInput["tau"];
+    Rcpp::IntegerVector lR = dfInput["l"];
+    Rcpp::NumericVector pvalueR = dfInput["pvalue"];
+    for (int i=0; i < tauR.size(); ++i){
+        tau.push_back(tauR[i]);
+        l.push_back(lR[i]);
+        pvalue.push_back(pvalueR[i]);
+    }
+
+    vector<Interval> filtered = cpp_filterIntervalsFromMemory(tau, l, pvalue);
+    Rcpp::DataFrame dfOutput = extractDataFrameFromIntervalVector(filtered);
+
+    return dfOutput;
+}

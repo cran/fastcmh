@@ -5,17 +5,21 @@
 //Dean Bodenham March 2016
 #include<iostream>
 #include<string>
-#include<fstream>
-#include<sstream>
 #include<vector>
 #include<iomanip>
 #include<numeric>
 #include<algorithm>
+#include<Rcpp.h>
 #include "filterIntervals.h"
 
 //add extra sort step, so result of filtering is the same, no matter the initial order of the intervals?
 
 //--------------------------------------------------------------------------//
+
+size_t computeEnd(size_t tau_, size_t l_){
+    return (tau_ + l_ - 1);
+}
+
 
 size_t Interval::getStart() const { return start;}
 size_t Interval::getEnd() const { return end;}
@@ -23,7 +27,7 @@ double Interval::getPvalue() const {return pvalue;}
 size_t Interval::getLength() const { return end - start + 1;}
 void Interval::setStart(size_t m_start){ start = m_start;}
 void Interval::setEnd(size_t m_end){ end = m_end;}
-void Interval::setEnd(size_t tau_, size_t l_){ end = tau_ + l_ - 1;}
+void Interval::setEnd(size_t tau_, size_t l_){ end = computeEnd(tau_, l_);}
 void Interval::setPvalue(double m_pvalue){ pvalue = m_pvalue;}
 
 //check if current interval overlaps interval [a,b]
@@ -35,7 +39,6 @@ bool Interval::overlaps(size_t a, size_t b) const{
     return doesOverlap;
 
 }
-
 
 //--------------------------------------------------------------------------//
 
@@ -67,10 +70,10 @@ void sortIntervals(vector<Interval>& v){
 //BUT also need to makesure this does not exceed max number of features
 size_t getMaxIntervalEndpoint(vector<size_t> v_tau, vector<size_t> v_l){
     size_t maxEndpoint = 0;
-    size_t start, end;
+//     size_t start, end;
+    size_t end;
     for (size_t index = 0; index != v_tau.size(); ++index){
-        start = v_tau[index];
-        end = start + v_l[index] - 1;
+        end = computeEnd(v_tau[index], v_l[index]);
         maxEndpoint = (maxEndpoint < end) ? end : maxEndpoint;
     }
     return maxEndpoint;
@@ -82,14 +85,15 @@ void makeIntervalTrue(vector<bool>& v, const size_t tau, const size_t l){
     //this was a problem, not checking that index < v.size()
     size_t count = 0;
     const size_t maxIndexTrue = tau + l;
-//     actually, maxIndexTrue should be l, since we start from tau...
-//     const size_t maxIndexTrue = l;
 
     //as soon as iterator reaches end OR enough values set to true, will stop loop. Need to use non-constant iterator here, because we change the value in the vector
-    for(vector<bool>::iterator it = v.begin() + tau; it != v.end() && count < maxIndexTrue; ++it){
+    const size_t interval_start = tau;
+    const size_t interval_end = computeEnd(tau, l);
+
+    for(vector<bool>::iterator it = v.begin() + interval_start; 
+                it != v.begin() + interval_end && count < maxIndexTrue; ++it){
         //remember - C++ counts from 0, but we have corrected for this when
         //constructing the vector
-//         v[index] = true;
         *it = true;
         count++;
     }
@@ -108,13 +112,11 @@ vector<bool> getClusterIndicatorVector(vector<size_t>& v_tau, vector<size_t>& v_
 
     //create two iterators, and move over both iterators
     vector<size_t>::const_iterator it_tau = v_tau.begin();
-//     vector<size_t>::const_iterator it_l = df.getL().begin();
     vector<size_t>::const_iterator it_l = v_l.begin();
 
     //just get rid of zeroth index
     //This was an error
-
-    for (; it_tau != v_tau.end(); ++it_tau, ++it_l){
+    for (; it_tau != v_tau.end() and it_l != v_l.end(); ++it_tau, ++it_l){
         makeIntervalTrue(clusterIndicator, *it_tau, *it_l);
     }
     return clusterIndicator;
@@ -141,7 +143,7 @@ vector<Interval> getClusters(vector<size_t>& v_tau, vector<size_t>& v_l){
                 //save start of cluster
                 thisCluster.setStart(index);
                 //not necessary, but worth setting pvalue
-                thisCluster.setPvalue(0.5);
+                thisCluster.setPvalue(DEFAULT_PVALUE);
             }
         } else{
             //okay, we've seen a false, but are in a cluster...must be the end
@@ -179,45 +181,46 @@ vector<Interval> getClusters(vector<size_t>& v_tau, vector<size_t>& v_l){
 //we use consts
 vector<int> getClusterLabelsForIntervals(const vector<size_t>& tau, const vector<size_t>& l, const vector<Interval>& cluster){
     //get tau and l
-//     vector<size_t> tau = df.getTau();
-//     vector<size_t> l = df.getL();
     //the label vector will be returned
-    vector<int> label;
+    vector<int> label(tau.size());
 
     //these ints are the temp label variables
-    int thisLabel;
-//     int thisCluster;
-    size_t tauEnd;
+    int thisIntervalLabel;
+    size_t thisIntervalEnd;
 
-    //create a vector of size the same as clusters
+    //create a vector of size as the same as clusters
     vector<int> clusterLabels(cluster.size());
     //fill it with 0, 1, ..., cluster.size()
     for (unsigned int i=0; i < clusterLabels.size(); ++i){
         clusterLabels[i] = i;
-    
     }
-//     std::iota (std::begin(clusterLabels), std::end(clusterLabels), 0);
-
-
+    
     //run through all intervals/tau's, iterating over both tau and l
     //although l is not needed...
     vector<size_t>::const_iterator it_tau = tau.begin();
     vector<size_t>::const_iterator it_l = l.begin();
-    for(; it_tau != tau.end() && it_l != l.end(); ++it_tau, ++it_l){
+    
+    for(size_t intervalIndex = 0; it_tau != tau.end() && it_l != l.end(); ++it_tau, ++it_l, ++intervalIndex){
         //in case no cluster assigned - which should not happen - interval will get label "0"
-        thisLabel = 0;
-        tauEnd = (*it_tau + *it_l) - 1;
+        //setting default value to 0, although could be -1...but worried about any error would kill the process
+//         thisIntervalLabel = -1;
+        thisIntervalLabel = 0;
+        thisIntervalEnd = computeEnd(*it_tau, *it_l);
+         
         //now check which cluster it belongs to:
         //this for-loop is iterating over clusters, which are intervals.
         //we are checking for a particular tau (original interval) if it overlaps with THIS cluster
         //if so, we give it that cluster label
-        vector<int>::const_iterator it_thisCluster = clusterLabels.begin();
-        for (vector<Interval>::const_iterator it_cluster = cluster.begin(); it_cluster != cluster.end() && it_thisCluster != clusterLabels.end(); ++it_cluster, ++it_thisCluster){
-            if (  (*it_cluster).overlaps(*it_tau, tauEnd)  ){
+        vector<int>::const_iterator it_thisClusterLabel = clusterLabels.begin();
+
+        for (vector<Interval>::const_iterator it_cluster = cluster.begin(); 
+            it_cluster != cluster.end() && it_thisClusterLabel != clusterLabels.end(); 
+            ++it_cluster, ++it_thisClusterLabel){
+            if (  (*it_cluster).overlaps(*it_tau, thisIntervalEnd)  ){
                 //this interval label is this cluster
-                thisLabel = *it_thisCluster;
+                thisIntervalLabel = *it_thisClusterLabel;
                 //push_back
-                label.push_back(thisLabel);
+                label[intervalIndex] = thisIntervalLabel;
             }
         
         }//for it_cluster, over clusters
@@ -250,13 +253,12 @@ vector<Interval> getMinPvalueIntervalPerCluster(vector<size_t>& tau, vector<size
 
     //create a vector of Intervals, which will have min pvalues...
     vector<Interval> sigInts(numClusters);
-    //set al pvalues to 1, and starting/end points to 0, for initialisation
-    //or should I just have a constructor?
-    //TODO: make constructor
+    //set all pvalues to 1, and starting/end points to 0, for initialisation
+    //TODO: should I just have a constructor/method?
     for (vector<Interval>::iterator it_sigInts = sigInts.begin(); it_sigInts != sigInts.end(); ++it_sigInts){
-        (*it_sigInts).setPvalue(1);
-        (*it_sigInts).setStart(0);
-        (*it_sigInts).setEnd(0);
+        (*it_sigInts).setStart(DEFAULT_START);
+        (*it_sigInts).setEnd(DEFAULT_END);
+        (*it_sigInts).setPvalue(DEFAULT_PVALUE);
     }
     
     //iterate over tau, l, pvalue and label all at once
@@ -326,19 +328,25 @@ vector<Interval> getMinPvalueIntervalPerCluster(vector<size_t>& tau, vector<size
 vector<Interval> createEmptyInterval(){
     vector<Interval> emptyInterval;
     Interval thisInterval;
-    thisInterval.setStart(-1);
-    thisInterval.setEnd(-1);
-    thisInterval.setPvalue(-1.0);
+    thisInterval.setStart(DEFAULT_START);
+    thisInterval.setEnd(DEFAULT_END);
+    thisInterval.setPvalue(DEFAULT_PVALUE);
 
     return(emptyInterval);
 } 
 
 
 
+
+
+
+
 //--------------------------------------------------------------------------//
+//MAIN FUNCTION
 vector<Interval> cpp_filterIntervalsFromMemory(vector<long long> ll_tau,
                                               vector<long long> ll_l,
                                               vector<double> pvalue){
+
     if (pvalue.size() > 0){
         //create data frame
         //need to case long long to size_t; not necessary for double, but do it anyway

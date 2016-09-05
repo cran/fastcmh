@@ -9,17 +9,20 @@
 
 #include<iostream>
 #include<string>
-#include<fstream>
-#include<sstream>
 #include<vector>
 #include<iomanip>
 #include<numeric>
+#include<algorithm>
+#include<Rcpp.h>
 
 using std::vector;
 using std::size_t;
 using std::string;
 using std::stringstream;
-using std::cout;
+
+const double DEFAULT_PVALUE = 1.0;
+const size_t DEFAULT_START = 0;
+const size_t DEFAULT_END = 0;
 
 //--------------------------------------------------------------------------//
 //--------------------------------------------------------------------------//

@@ -2,7 +2,6 @@
 #define RCPPDATAWRAP_H
 
 #include<vector>
-#include<vector>
 #include<numeric>
 #include <R.h>
 #include<Rcpp.h>
@@ -25,5 +24,11 @@ Rcpp::DataFrame createDataFrameTauLPvalue(const vector<long long>& , const vecto
 
 //create a return list that indicates an error occurred
 Rcpp::DataFrame createErrorReturnList();
+
+
+//used for testing the filtering
+//this function is exported to R
+Rcpp::DataFrame cpp_test_filtering(const Rcpp::DataFrame&);
+
 
 #endif

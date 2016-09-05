@@ -5,3 +5,7 @@ main_fastcmh2 <- function(xfilenameR, yfilenameR, cfilenameR, alphaR, lmaxR, sho
     .Call('fastcmh_main_fastcmh2', PACKAGE = 'fastcmh', xfilenameR, yfilenameR, cfilenameR, alphaR, lmaxR, showProcessingR, saveAllPvalsR, doFDR_R, useDependenceFDR_R)
 }
 
+cpp_test_filtering <- function(dfInput) {
+    .Call('fastcmh_cpp_test_filtering', PACKAGE = 'fastcmh', dfInput)
+}
+

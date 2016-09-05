@@ -24,3 +24,14 @@ BEGIN_RCPP
     return __result;
 END_RCPP
 }
+// cpp_test_filtering
+Rcpp::DataFrame cpp_test_filtering(const Rcpp::DataFrame& dfInput);
+RcppExport SEXP fastcmh_cpp_test_filtering(SEXP dfInputSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< const Rcpp::DataFrame& >::type dfInput(dfInputSEXP);
+    __result = Rcpp::wrap(cpp_test_filtering(dfInput));
+    return __result;
+END_RCPP
+}

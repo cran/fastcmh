@@ -1,44 +1,9 @@
-/* LIBRARY INCLUDES */
-#include<math.h>
-#include<stdlib.h>
-#include<stdio.h>
-
-#include <string>
-//for converting int to string without C++11
-#include <fstream>
-#include <sstream>
-
-// #include<Rdefines.h>
-// #include<String>
-#include <exception>
-#include <stdexcept>
-
-//from time_keeping.c
-#include <time.h> //Already included in original LCM source code above
-
-//cpp time
-#include <ctime>
-
-#include <R.h>
-#include "Rmath.h"
-#include<Rcpp.h>
-#include<Rinternals.h>
-
-//filter intervals
-#include "filterIntervals.h"
-#include "rcppdatawrap.h"
-
-#include "fdr.h"
-
-//NEED VECTOR
-#include<vector>
-
+#include "fastcmh_cpp.h"
 
 /* CODE DEPENDENCIES */
 //#include"time_keeping.c"
 //#include "./chi2.h"
 
-/* MACROS */
 
 
 /* CONSTANT DEFINES */
@@ -47,6 +12,14 @@
 #define LOG10_MIN_PVAL -30.0 //Minimum tentative corrected significance threshold = 10^{LOG10_MIN_PVAL}
 
 /* -------------------------------------------- GLOBAL VARIABLES -----------------------------------------------------------*/
+
+const int ASCII_0 = 48;
+const int ASCII_1 = 49;
+const int ASCII_9 = 57;
+const int ASCII_NEWLINE = 10;
+const int MAX_ASCII = 256;
+const int ASCII_OTHER = 127;
+const int ASCII_OTHER_NEWLINE = 126;
 
 bool saveAllPvals = true;
 bool showProcessing = false;
@@ -202,9 +175,22 @@ std::vector<double> fdrPval;
 template <typename T>
 string ToString(T val)
 {
-    stringstream stream;
-    stream << val;
-    return stream.str();
+    return std::to_string(val);
+//    //previous method
+//     stringstream stream;
+//     stream << val;
+//     return stream.str();
+}
+
+//need to make my own to_string, since it is only part of C++11
+//but now using C++11
+string my_to_string(int i){
+    return std::to_string(i);
+//    //prvious method
+//     stringstream ss;
+//     ss << i;
+//     string str = ss.str();
+//     return(str);
 }
 
 
@@ -416,24 +402,31 @@ int sis_init(char *X_filename, char *Y_filename, char *C_filename, double target
     int get_N_n_SUCCESS = EXIT_FAILURE;
     try {
         get_N_n_SUCCESS = get_N_n(Y_filename);
-    } catch (const std::exception&){
-        return EXIT_FAILURE;
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
     }
 
     int getL_SUCCESS = EXIT_FAILURE;
     try {
         getL_SUCCESS = get_L(X_filename);
-    } catch (const std::exception&){
-        return EXIT_FAILURE;
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
     }
 
 
     int getK_SUCCESS = EXIT_FAILURE;
     try {
         getK_SUCCESS = get_K(C_filename);
-    } catch (const std::exception&){
-        return EXIT_FAILURE;
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
     }
+
 // 	toc = measureClocks();
 // 	time_IO += toc-tic;
 
@@ -450,82 +443,143 @@ int sis_init(char *X_filename, char *Y_filename, char *C_filename, double target
 
 	// Allocate space for per table number of observations and number of observations in positive class
 	Nt = (long long *)calloc(K, sizeof(long long));
-	if(!Nt){
-// 		fprintf(stderr,"Error in function sis_init: couldn't allocate memory for array Nt\n");
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array Nt\n");
-        return EXIT_FAILURE;
-	}
+    try{
+        if(!Nt){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array Nt\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	nt = (long long *)calloc(K, sizeof(long long));
-	if(!nt){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array nt\n");
-        return EXIT_FAILURE;
-	}
+    try{
+        if(!nt){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array nt\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
+
 	cum_Nt = (long long *)calloc(K+1, sizeof(long long));
-	if(!cum_Nt){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array cum_Nt\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!cum_Nt){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array cum_Nt\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 
 	// And read covariates file, filling in the array Nt
 // 	tic = measureClocks();
     int read_covariates_file_SUCCESS = EXIT_FAILURE;
     try {
         read_covariates_file_SUCCESS = read_covariates_file(C_filename);
-    } catch (const std::exception&){
-        return EXIT_FAILURE;
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
     }
+
 // 	toc = measureClocks();
 // 	time_IO += toc-tic;
 
 	// Allocate space for class labels
 	Y_tr = (char *)malloc(N*sizeof(char));
-	if(!Y_tr){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array Y_tr\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!Y_tr){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array Y_tr\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	// And store them in memory from file, also computing nt along the way
 // 	tic = measureClocks();
     int read_labels_file_SUCCESS = EXIT_FAILURE;
     try {
         read_labels_file_SUCCESS = read_labels_file(Y_filename);
-    } catch (const std::exception&){
-        return EXIT_FAILURE;
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
     }
+
 // 	toc = measureClocks();
 // 	time_IO += toc-tic;
 
 	// Initialise dataset matrix
 	X_tr = (char **)malloc(L*sizeof(char *));
-	if(!X_tr){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array X_tr\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!X_tr){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array X_tr\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
 
 	X_tr[0] = (char *)calloc(L*N, sizeof(char));
-	if(!X_tr[0]){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array X_tr[0]\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!X_tr[0]){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array X_tr[0]\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	for(j=1; j<L; j++) X_tr[j] = X_tr[0] + j*N;
 	// Same for parents
 	X_par = (char **)malloc(L*sizeof(char *));
-	if(!X_par){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array X_par\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!X_par){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array X_par\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	X_par[0] = (char *)calloc(L*N, sizeof(char));
-	if(!X_par[0]){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array X_par[0]\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!X_par[0]){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array X_par[0]\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	for(j=1; j<L; j++) X_par[j] = X_par[0] + j*N;
 
 // 	tic = measureClocks();
     int read_dataset_file_SUCCESS = EXIT_FAILURE;
     try {
         read_dataset_file_SUCCESS = read_dataset_file(X_filename, X_tr[0]);
-    } catch (const std::exception&){
-        return EXIT_FAILURE;
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
     }
 // 	toc = measureClocks();
 // 	time_IO += toc-tic;
@@ -535,25 +589,53 @@ int sis_init(char *X_filename, char *Y_filename, char *C_filename, double target
 
 	// First some small vectors to precompute some common magnitudes used to evaluate the test statistics
 	Nt_nt = (long long *)calloc(K, sizeof(long long));
-	if(!Nt_nt){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array Nt_nt\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!Nt_nt){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array Nt_nt\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	hypercorner_bnd = (long long *)calloc(K, sizeof(long long));
-	if(!hypercorner_bnd){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array hypercorner_bnd\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!hypercorner_bnd){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array hypercorner_bnd\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	gammat = (double *)calloc(K, sizeof(double));
-	if(!gammat){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array gammat\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!gammat){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array gammat\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	gammabint = (double *)calloc(K, sizeof(double));
-	if(!gammabint){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array gammabint\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!gammabint){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array gammabint\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	// Fill them in
 	for(j=0; j<K; j++){
 		Nt_nt[j] = Nt[j]-nt[j];
@@ -561,50 +643,104 @@ int sis_init(char *X_filename, char *Y_filename, char *C_filename, double target
 		gammat[j] = ((double)nt[j])/Nt[j];
 		gammabint[j] = gammat[j]*(1-gammat[j]);
 	}
+
 	// Some other small vectors which will be used in the function isprunable to avoid recomputing things
 	f_vals = (double *)calloc(K, sizeof(double));
-	if(!f_vals){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array f_vals\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!f_vals){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array f_vals\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	g_vals = (double *)calloc(K, sizeof(double));
-	if(!g_vals){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array g_vals\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!g_vals){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array g_vals\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	betas = (double *)calloc(K, sizeof(double));
-	if(!betas){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array betas\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!betas){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array betas\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	idx_betas_sorted = (long long *)calloc(K, sizeof(long long));
-	if(!idx_betas_sorted){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array idx_betas_sorted\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!idx_betas_sorted){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array idx_betas_sorted\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 
 	// Now some larger data structures used during the enumeration procedure
 	testable_queue = (long long *)calloc(L, sizeof(long long));
-	if(!testable_queue){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array testable_queue\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!testable_queue){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array testable_queue\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	freq_par = (long long **)calloc(L, sizeof(long long *));
-	if(!freq_par){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array freq_par\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!freq_par){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array freq_par\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	freq_par[0] = (long long *)calloc(L*K, sizeof(long long));
-	if(!freq_par[0]){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array freq_par[0]\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!freq_par[0]){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array freq_par[0]\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
+
 	for(j=1; j<L; j++) freq_par[j] = freq_par[0] + j*K;
 	freq_cnt = (long long *)calloc((NGRID+1), sizeof(long long));
-	if(!freq_cnt){
-		throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array freq_cnt\n");
-        return EXIT_FAILURE;
-	}
+
+    try {
+        if(!freq_cnt){
+            throw std::runtime_error("Error in function sis_init: couldn't allocate memory for array freq_cnt\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 
 
     if ( (get_N_n_SUCCESS==EXIT_FAILURE) or 
@@ -650,14 +786,6 @@ void sis_end(){
 	free(testable_queue);
 }
 
-
-//need to make my own to_string, since it is only part of C++11
-string my_to_string(int i){
-    stringstream ss;
-    ss << i;
-    string str = ss.str();
-    return(str);
-}
 
 
 /* ---------------------------------------FUNCTIONS TO FIND THE SIGNIFICANT INTERVALS-------------------------------- */
@@ -1146,32 +1274,44 @@ int get_N_n(char *labels_file){
 	FILE *f_labels;//Stream with file containing class labels
 	int n_read;//Number of chars read
 	int i;// Iterator variable to be used in loops
-	char char_to_int[256];//Array for converting chars to int fast
+	char char_to_int[MAX_ASCII];//Array for converting chars to int fast
 	char *read_buf, *read_buf_aux, *read_buf_end;//Buffer for reading from file and extra pointers for loops
+    int int_read_buf_aux;
 
 	// Initialise both counters to 0 (the variables are defined as global variables in wy.c)
 	N = 0; n = 0;
 
 	//Try to open file, giving an error message if it fails
-	if(!(f_labels = fopen(labels_file,"r"))){
-        string message = "Error in function get_N_n when opening file ";
-        message.append(labels_file);
-        message.append("\n");
-		throw std::runtime_error(message);
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!(f_labels = fopen(labels_file,"r"))){
+            string message = "Error in function get_N_n when opening file ";
+            message.append(labels_file);
+            message.append("\n");
+            throw std::runtime_error(message);
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
 
 	//Try to allocate memory for the buffer, giving an error message if it fails
 	read_buf = (char *)malloc(READ_BUF_SIZ*sizeof(char));
-	if(!read_buf){
-		throw std::runtime_error("Error in function get_N_n: couldn't allocate memory for array read_buf\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!read_buf){
+            throw std::runtime_error("Error in function get_N_n: couldn't allocate memory for array read_buf\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 
 	//Initialize the char to int converter
-	for(i=0;i<256;i++) char_to_int[i] = 127;
+	for(i=0;i<MAX_ASCII;i++) char_to_int[i] = ASCII_OTHER;
 	// We only care about the chars '0' and '1'. Everything else is mapped into the same "bucket"
-	char_to_int['0'] = 0; char_to_int['1'] = 1;
+	char_to_int[ASCII_0] = 0; char_to_int[ASCII_1] = 1;
 
 	// Read the entire file
 	while(1){
@@ -1179,19 +1319,28 @@ int get_N_n(char *labels_file){
 		n_read = fread(read_buf,sizeof(char),READ_BUF_SIZ,f_labels);
 		// If the number of chars read, n_read_ is smaller than READ_BUF_SIZ, either the file ended
 		// or there was an error. Check if it was the latter
-		if((n_read < READ_BUF_SIZ) && !feof(f_labels)){
-            string message = "Error in function get_N_n while reading the file ";
-            message.append(labels_file);
-            message.append("\n");
-			throw std::runtime_error(message);
-            return EXIT_FAILURE;
-		}
+        try {
+            if((n_read < READ_BUF_SIZ) && !feof(f_labels)){
+                string message = "Error in function get_N_n while reading the file ";
+                message.append(labels_file);
+                message.append("\n");
+                throw std::runtime_error(message);
+            }
+        } catch(std::exception &ex) {	
+            forward_exception_to_r(ex);
+        } catch(...) { 
+            ::Rf_error("c++ exception (unknown reason)"); 
+        }
+
 		// Process the n_read chars read from the file
 		for(read_buf_aux=read_buf,read_buf_end=read_buf+n_read;read_buf_aux<read_buf_end;read_buf_aux++){
 			//If the character is anything other than '0' or '1' go to process the next char
-			if(char_to_int[*read_buf_aux] == 127) continue;
+            int_read_buf_aux = (int) *read_buf_aux;
+// 			if(char_to_int[*read_buf_aux] == ASCII_OTHER) continue;
+			if(char_to_int[int_read_buf_aux] == ASCII_OTHER) continue;
 			N++;
-			if(char_to_int[*read_buf_aux]) n++;
+// 			if(char_to_int[*read_buf_aux]) n++;
+			if(char_to_int[int_read_buf_aux]) n++;
 		}
 		// Check if the file ended,. If yes, then exit the while loop
 		if(feof(f_labels)) break;
@@ -1210,30 +1359,42 @@ int read_labels_file(char *labels_file){
 	int n_read;//Number of chars read
 	long long i;// Iterator variable to be used in loops
 	long long k; //Current table index
-	char char_to_int[256];//Array for converting chars to int fast
+	char char_to_int[MAX_ASCII];//Array for converting chars to int fast
 	char *read_buf, *read_buf_aux, *read_buf_end;//Buffer for reading from file and extra pointers for loops
 	char *labels_aux = Y_tr;//Auxiliary pointer to array labels for increments
+    int int_read_buf_aux;
 
 	//Try to open file, giving an error message if it fails
-	if(!(f_labels = fopen(labels_file,"r"))){
-        string message = "Error in function read_labels_file when opening file ";
-        message.append(labels_file);
-        message.append("\n");
-        throw std::runtime_error(message);
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!(f_labels = fopen(labels_file,"r"))){
+            string message = "Error in function read_labels_file when opening file ";
+            message.append(labels_file);
+            message.append("\n");
+            throw std::runtime_error(message);
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 
 	//Try to allocate memory for the buffer, giving an error message if it fails
 	read_buf = (char *)malloc(READ_BUF_SIZ*sizeof(char));
-	if(!read_buf){
-		throw std::runtime_error("Error in function read_labels_file: couldn't allocate memory for array read_buf\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!read_buf){
+            throw std::runtime_error("Error in function read_labels_file: couldn't allocate memory for array read_buf\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
 
 	//Initialize the char to int converter
-	for(i=0;i<256;i++) char_to_int[i] = 127;
+	for(i=0;i<MAX_ASCII;i++) char_to_int[i] = ASCII_OTHER;
 	// We only care about the chars '0' and '1'. Everything else is mapped into the same "bucket"
-	char_to_int['0'] = 0; char_to_int['1'] = 1;
+	char_to_int[ASCII_0] = 0; char_to_int[ASCII_1] = 1;
 
 	// Read the entire file
 	i = 0; //Here i stands for the number of labels read so far
@@ -1243,19 +1404,30 @@ int read_labels_file(char *labels_file){
 		n_read = fread(read_buf,sizeof(char),READ_BUF_SIZ,f_labels);
 		// If the number of chars read, n_read_ is smaller than READ_BUF_SIZ, either the file ended
 		// or there was an error. Check if it was the latter
-		if((n_read < READ_BUF_SIZ) && !feof(f_labels)){
-            string message = "Error in function read_labels_file while reading the file ";
-            message.append(labels_file);
-            message.append("\n");
-            throw std::runtime_error(message);
-            return EXIT_FAILURE;
-		}
+        try {
+            if((n_read < READ_BUF_SIZ) && !feof(f_labels)){
+                string message = "Error in function read_labels_file while reading the file ";
+                message.append(labels_file);
+                message.append("\n");
+                throw std::runtime_error(message);
+                return EXIT_FAILURE;
+            }
+        } catch(std::exception &ex) {	
+            forward_exception_to_r(ex);
+        } catch(...) { 
+            ::Rf_error("c++ exception (unknown reason)"); 
+        }
+
 		// Process the n_read chars read from the file
 		for(read_buf_aux=read_buf,read_buf_end=read_buf+n_read;read_buf_aux<read_buf_end;read_buf_aux++){
 			//If the character is anything other than '0' or '1' go to process the next char
-			if(char_to_int[*read_buf_aux] == 127) continue;
-			*labels_aux++ = char_to_int[*read_buf_aux];
-			nt[k] += char_to_int[*read_buf_aux];
+            int_read_buf_aux = (int) *read_buf_aux;
+// 			if(char_to_int[*read_buf_aux] == ASCII_OTHER) continue;
+			if(char_to_int[int_read_buf_aux] == ASCII_OTHER) continue;
+			*labels_aux++ = char_to_int[int_read_buf_aux];
+// 			*labels_aux++ = char_to_int[*read_buf_aux];
+			nt[k] += char_to_int[int_read_buf_aux];
+// 			nt[k] += char_to_int[*read_buf_aux];
 			i++;
 			if(i==cum_Nt[k+1]) k++;
 		}
@@ -1265,17 +1437,20 @@ int read_labels_file(char *labels_file){
 
 	// Sanity check to see if we successfully read the correct number of labels
 	i = labels_aux-Y_tr;
-	if(i != N){
-            string message = "Error in function read_labels_file: incorrect number of labels read. Read ";
-        message.append(my_to_string(i));
-        message.append(", correct number ");
-        message.append(my_to_string(N));
-        message.append("\n");
-        throw std::runtime_error(message);
-        return EXIT_FAILURE;
-// 		fprintf(stderr,"Error in function read_labels_file: incorrect number of labels read. Read %lld, correct number %lld\n",i,N);
-// 		exit(1);
-	}
+    try {
+        if(i != N){
+                string message = "Error in function read_labels_file: incorrect number of labels read. Read ";
+            message.append(my_to_string(i));
+            message.append(", correct number ");
+            message.append(my_to_string(N));
+            message.append("\n");
+            throw std::runtime_error(message);
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 
 	//Close the file
 	fclose(f_labels);
@@ -1289,28 +1464,39 @@ int get_L(char *filename){
 	FILE *f_dat = ((FILE*)0);
 	int i, n_read;
 // 	int j;
-	char char_to_int[256];//Array for converting chars to int fast
+	char char_to_int[MAX_ASCII];//Array for converting chars to int fast
 	char *read_buf, *read_buf_aux, *read_buf_end;//Buffer for reading from file and extra pointers for loops
+    int int_read_buf_aux;
 
 	//Try to open file, giving an error message if it fails
-	if(!(f_dat = fopen(filename,"r"))){
-        string message = "Error in function get_L when opening file ";
-        message.append(filename);
-        message.append("\n");
-        throw std::runtime_error(message);
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!(f_dat = fopen(filename,"r"))){
+            string message = "Error in function get_L when opening file ";
+            message.append(filename);
+            message.append("\n");
+            throw std::runtime_error(message);
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 	//Try to allocate memory for the buffer, giving an error message if it fails
 	read_buf = (char *)malloc(READ_BUF_SIZ*sizeof(char));
-	if(!read_buf){
-		throw std::runtime_error("Error in function get_L: couldn't allocate memory for array read_buf\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!read_buf){
+            throw std::runtime_error("Error in function get_L: couldn't allocate memory for array read_buf\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 
 	//Initialize the char to int converter
-	for(i=0;i<256;i++) char_to_int[i] = 0;
+	for(i=0;i<MAX_ASCII;i++) char_to_int[i] = 0;
 	// We only care about the chars '0' and '1'. Everything else is mapped into the same "bucket"
-	char_to_int['\n'] = 1;
+	char_to_int[ASCII_NEWLINE] = 1;
 
 	// Read the entire file, counting the number of lines
 	L = 0;
@@ -1319,15 +1505,24 @@ int get_L(char *filename){
 		n_read = fread(read_buf,sizeof(char),READ_BUF_SIZ,f_dat);
 		// If the number of chars read, n_read_ is smaller than READ_BUF_SIZ, either the file ended
 		// or there was an error. Check if it was the latter
-		if((n_read < READ_BUF_SIZ) && !feof(f_dat)){
-            string message = "Error in function get_L while reading the file ";
-            message.append(filename);
-            message.append("\n");
-            throw std::runtime_error(message);
-            return EXIT_FAILURE;
-		}
+        try {
+            if((n_read < READ_BUF_SIZ) && !feof(f_dat)){
+                string message = "Error in function get_L while reading the file ";
+                message.append(filename);
+                message.append("\n");
+                throw std::runtime_error(message);
+            }
+        } catch(std::exception &ex) {	
+            forward_exception_to_r(ex);
+        } catch(...) { 
+            ::Rf_error("c++ exception (unknown reason)"); 
+        }
 		// Process the n_read chars read from the file
-		for(read_buf_aux=read_buf,read_buf_end=read_buf+n_read;read_buf_aux<read_buf_end;read_buf_aux++) if(char_to_int[*read_buf_aux]) L++;
+		for(read_buf_aux=read_buf,read_buf_end=read_buf+n_read;read_buf_aux<read_buf_end;read_buf_aux++) {
+//             if(char_to_int[*read_buf_aux]) L++;
+            int_read_buf_aux = (int) *read_buf_aux;
+            if(char_to_int[int_read_buf_aux]) L++;
+        }
 		// Check if the file ended,. If yes, then exit the while loop
 		if(feof(f_dat)) break;
 	}
@@ -1345,28 +1540,40 @@ int read_dataset_file(char *filename, char *ptr){
 	FILE *f_dat = ((FILE*)0);
 	int i, n_read;
 // 	int j;
-	char char_to_int[256];//Array for converting chars to int fast
+	char char_to_int[MAX_ASCII];//Array for converting chars to int fast
 	char *read_buf, *read_buf_aux, *read_buf_end;//Buffer for reading from file and extra pointers for loops
+    int int_read_buf_aux;
 
 	//Try to open file, giving an error message if it fails
-	if(!(f_dat = fopen(filename,"r"))){
-        string message = "Error in function get_L when opening file ";
-        message.append(filename);
-        message.append("\n");
-        throw std::runtime_error(message);
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!(f_dat = fopen(filename,"r"))){
+            string message = "Error in function get_L when opening file ";
+            message.append(filename);
+            message.append("\n");
+            throw std::runtime_error(message);
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 	//Try to allocate memory for the buffer, giving an error message if it fails
 	read_buf = (char *)malloc(READ_BUF_SIZ*sizeof(char));
-	if(!read_buf){
-		throw std::runtime_error("Error in function get_L: couldn't allocate memory for array read_buf\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!read_buf){
+            throw std::runtime_error("Error in function get_L: couldn't allocate memory for array read_buf\n");
+            return EXIT_FAILURE;
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 
 	//Initialize the char to int converter
-	for(i=0;i<256;i++) char_to_int[i] = 127;
+	for(i=0;i<MAX_ASCII;i++) char_to_int[i] = ASCII_OTHER;
 	// We only care about the chars '0' and '1'. Everything else is mapped into the same "bucket"
-	char_to_int['0'] = 0; char_to_int['1'] = 1;
+	char_to_int[ASCII_0] = 0; char_to_int[ASCII_1] = 1;
 
 	// Read the entire file
 	while(1){
@@ -1374,18 +1581,26 @@ int read_dataset_file(char *filename, char *ptr){
 		n_read = fread(read_buf,sizeof(char),READ_BUF_SIZ,f_dat);
 		// If the number of chars read, n_read_ is smaller than READ_BUF_SIZ, either the file ended
 		// or there was an error. Check if it was the latter
-		if((n_read < READ_BUF_SIZ) && !feof(f_dat)){
-            string message = "Error in function get_L while reading the file ";
-            message.append(filename);
-            message.append("\n");
-            throw std::runtime_error(message);
-            return EXIT_FAILURE;
-		}
+        try {
+            if((n_read < READ_BUF_SIZ) && !feof(f_dat)){
+                string message = "Error in function get_L while reading the file ";
+                message.append(filename);
+                message.append("\n");
+                throw std::runtime_error(message);
+            }
+        } catch(std::exception &ex) {	
+            forward_exception_to_r(ex);
+        } catch(...) { 
+            ::Rf_error("c++ exception (unknown reason)"); 
+        }
 		// Process the n_read chars read from the file
 		for(read_buf_aux=read_buf,read_buf_end=read_buf+n_read;read_buf_aux<read_buf_end;read_buf_aux++){
 			//If the character is anything other than '0' or '1' go to process the next char
-			if(char_to_int[*read_buf_aux] == 127) continue;
-			*ptr++ = char_to_int[*read_buf_aux];
+            int_read_buf_aux = (int) *read_buf_aux;
+// 			if(char_to_int[*read_buf_aux] == ASCII_OTHER) continue;
+			if(char_to_int[int_read_buf_aux] == ASCII_OTHER) continue;
+// 			*ptr++ = char_to_int[*read_buf_aux];
+			*ptr++ = char_to_int[int_read_buf_aux];
 		}
 		// Check if the file ended,. If yes, then exit the while loop
 		if(feof(f_dat)) break;
@@ -1404,32 +1619,43 @@ int get_K(char *covariates_file){
 	FILE *f_covariates;//Stream with file containing class labels
 	int n_read;//Number of chars read
 	int i;// Iterator variable to be used in loops
-	char char_to_int[256];//Array for converting chars to int fast
+	char char_to_int[MAX_ASCII];//Array for converting chars to int fast
 	char *read_buf, *read_buf_aux, *read_buf_end;//Buffer for reading from file and extra pointers for loops
+    int int_read_buf_aux;
 
 	// Initialise both counters to 0 (the variables are defined as global variables in wy.c)
 	K = 0;
 
 	//Try to open file, giving an error message if it fails
-	if(!(f_covariates = fopen(covariates_file,"r"))){
-        string message = "Error in function get_K when opening file ";
-        message.append(covariates_file);
-        message.append("\n");
-        throw std::runtime_error(message);
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!(f_covariates = fopen(covariates_file,"r"))){
+            string message = "Error in function get_K when opening file ";
+            message.append(covariates_file);
+            message.append("\n");
+            throw std::runtime_error(message);
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 
 	//Try to allocate memory for the buffer, giving an error message if it fails
 	read_buf = (char *)malloc(READ_BUF_SIZ*sizeof(char));
-	if(!read_buf){
-		throw std::runtime_error("Error in function get_K: couldn't allocate memory for array read_buf\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!read_buf){
+            throw std::runtime_error("Error in function get_K: couldn't allocate memory for array read_buf\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 
 	//Initialize the char to int converter
-	for(i=0;i<256;i++) char_to_int[i] = 127;
+	for(i=0;i<MAX_ASCII;i++) char_to_int[i] = ASCII_OTHER;
 	// We only care about newlines
-	char_to_int['\n'] = 0;
+	char_to_int[ASCII_NEWLINE] = 0;
 
 	// Read the entire file, counting the number of lines
 	while(1){
@@ -1437,17 +1663,24 @@ int get_K(char *covariates_file){
 		n_read = fread(read_buf,sizeof(char),READ_BUF_SIZ,f_covariates);
 		// If the number of chars read, n_read_ is smaller than READ_BUF_SIZ, either the file ended
 		// or there was an error. Check if it was the latter
-		if((n_read < READ_BUF_SIZ) && !feof(f_covariates)){
-            string message = "Error in function get_K while reading the file ";
-            message.append(covariates_file);
-            message.append("\n");
-            throw std::runtime_error(message);
-            return EXIT_FAILURE;
-		}
+        try {
+            if((n_read < READ_BUF_SIZ) && !feof(f_covariates)){
+                string message = "Error in function get_K while reading the file ";
+                message.append(covariates_file);
+                message.append("\n");
+                throw std::runtime_error(message);
+            }
+        } catch(std::exception &ex) {	
+            forward_exception_to_r(ex);
+        } catch(...) { 
+            ::Rf_error("c++ exception (unknown reason)"); 
+        }
 		// Process the n_read chars read from the file
 		for(read_buf_aux=read_buf,read_buf_end=read_buf+n_read;read_buf_aux<read_buf_end;read_buf_aux++){
+            int_read_buf_aux = (int) *read_buf_aux;
 			//If the character is not a newline process the next character
-			if(char_to_int[*read_buf_aux] == 127) continue;
+// 			if(char_to_int[*read_buf_aux] == ASCII_OTHER) continue;
+			if(char_to_int[int_read_buf_aux] == ASCII_OTHER) continue;
 			K++;
 		}
 		// Check if the file ended,. If yes, then exit the while loop
@@ -1467,31 +1700,44 @@ int read_covariates_file(char *covariates_file){
 	int n_read;//Number of chars read
 	long long i;// Iterator variable to be used in loops
 	long long k;//Number of tables already processed
-	char c;// Iterator variable to be used in loops
-	char char_to_int[256];//Array for converting chars to int fast
+	//char c;// Iterator variable to be used in loops
+	int c;// Iterator variable to be used in loops
+	char char_to_int[MAX_ASCII];//Array for converting chars to int fast
 	char *read_buf, *read_buf_aux, *read_buf_end;//Buffer for reading from file and extra pointers for loops
+    int int_read_buf_aux;
 
 	//Try to open file, giving an error message if it fails
-	if(!(f_covariates = fopen(covariates_file,"r"))){
-        string message = "Error in function read_covariates_file when opening file ";
-        message.append(covariates_file);
-        message.append("\n");
-        throw std::runtime_error(message);
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!(f_covariates = fopen(covariates_file,"r"))){
+            string message = "Error in function read_covariates_file when opening file ";
+            message.append(covariates_file);
+            message.append("\n");
+            throw std::runtime_error(message);
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+
 
 	//Try to allocate memory for the buffer, giving an error message if it fails
 	read_buf = (char *)malloc(READ_BUF_SIZ*sizeof(char));
-	if(!read_buf){
-		throw std::runtime_error("Error in function read_covariates_file: couldn't allocate memory for array read_buf\n");
-        return EXIT_FAILURE;
-	}
+    try {
+        if(!read_buf){
+            throw std::runtime_error("Error in function read_covariates_file: couldn't allocate memory for array read_buf\n");
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 
 	//Initialize the char to int converter
-	for(i=0;i<256;i++) char_to_int[i] = 127;
+	for(i=0;i<MAX_ASCII;i++) char_to_int[i] = ASCII_OTHER;
 	// We only care about chars representing digits and newline
-	for(c='0'; c<='9'; c++) char_to_int[c] = c - '0';
-	char_to_int['\n'] = 126;
+	for(c=ASCII_0; c<=ASCII_9; c++) char_to_int[c] = c - ASCII_0;
+	char_to_int[ASCII_NEWLINE] = ASCII_OTHER_NEWLINE;
 
 	// Read the entire file
 	i = 0; k = 0;
@@ -1500,26 +1746,36 @@ int read_covariates_file(char *covariates_file){
 		n_read = fread(read_buf,sizeof(char),READ_BUF_SIZ,f_covariates);
 		// If the number of chars read, n_read_ is smaller than READ_BUF_SIZ, either the file ended
 		// or there was an error. Check if it was the latter
-		if((n_read < READ_BUF_SIZ) && !feof(f_covariates)){
-            string message = "Error in function read_covariates_file while reading the file ";
-            message.append(covariates_file);
-            message.append("\n");
-            throw std::runtime_error(message);
-            return EXIT_FAILURE;
-		}
+        try {
+            if((n_read < READ_BUF_SIZ) && !feof(f_covariates)){
+                string message = "Error in function read_covariates_file while reading the file ";
+                message.append(covariates_file);
+                message.append("\n");
+                throw std::runtime_error(message);
+            }
+        } catch(std::exception &ex) {	
+            forward_exception_to_r(ex);
+        } catch(...) { 
+            ::Rf_error("c++ exception (unknown reason)"); 
+        }
 		// Process the n_read chars read from the file
 		for(read_buf_aux=read_buf,read_buf_end=read_buf+n_read;read_buf_aux<read_buf_end;read_buf_aux++){
 			//If the character is neither a digit nor a newline process the next char
-			if(char_to_int[*read_buf_aux] == 127) continue;
+
+            int_read_buf_aux = (int) *read_buf_aux;
+// 			if(char_to_int[*read_buf_aux] == ASCII_OTHER) continue;
+			if(char_to_int[int_read_buf_aux] == ASCII_OTHER) continue;
 			// If the character is a newline, we have read a number already so we save it and go to next line
-			if(char_to_int[*read_buf_aux] == 126){
+// 			if(char_to_int[*read_buf_aux] == ASCII_OTHER_NEWLINE){
+			if(char_to_int[int_read_buf_aux] == ASCII_OTHER_NEWLINE){
 				Nt[k++] = i;
 				cum_Nt[k] = cum_Nt[k-1] + Nt[k-1];
 				i = 0;
 				continue;
 			}
 			// Otherwise the character is a digit, so we accumulate it into the current number
-			i = 10*i + char_to_int[*read_buf_aux];
+// 			i = 10*i + char_to_int[*read_buf_aux];
+			i = 10*i + char_to_int[int_read_buf_aux];
 		}
 		// Check if the file ended,. If yes, then exit the while loop
 		if(feof(f_covariates)) break;
@@ -1528,16 +1784,20 @@ int read_covariates_file(char *covariates_file){
 	// Sanity check to see if we successfully read the distribution of observations per table
 	i = 0;
 	for(k=0; k<K; k++) i += Nt[k];
-	if(i != N){
-        string message = "Error in function read_covariates_file: incorrect number of observations per table read. Total N ";
-        message.append(my_to_string(N));
-        message.append(", Accumulated N in covariates file ");
-        message.append(my_to_string(i));
-        message.append("\n");
-        throw std::runtime_error(message);
-        return EXIT_FAILURE;
-// 		fprintf(stderr,"Error in function read_covariates_file: incorrect number of observations per table read. Total N %lld, Accumulated N in covariates file %lld\n",N,i);
-	}
+    try {
+        if(i != N){
+            string message = "Error in function read_covariates_file: incorrect number of observations per table read. Total N ";
+            message.append(my_to_string(N));
+            message.append(", Accumulated N in covariates file ");
+            message.append(my_to_string(i));
+            message.append("\n");
+            throw std::runtime_error(message);
+        }
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
 
 	//Close the file
 	fclose(f_covariates);
@@ -1547,6 +1807,7 @@ int read_covariates_file(char *covariates_file){
 
     return EXIT_SUCCESS;
 }
+
 
 inline int bucket_idx(double pval){
 	int idx;
@@ -1591,8 +1852,10 @@ int computeFastCMH(char* xfilenameCpp, char* yfilenameCpp, char* cfilenameCpp, d
     int initSuccess = EXIT_FAILURE;
     try {
         initSuccess = sis_init(xfilenameCpp, yfilenameCpp, cfilenameCpp, alphaval, Lmaxlonglong);
-    } catch (const std::exception&){
-        return EXIT_FAILURE;
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
     }
 
     if (initSuccess==EXIT_SUCCESS){
@@ -1644,8 +1907,8 @@ Rcpp::List createTimingList(){
             Rcpp::Named("init") = timeInitialisation,
             Rcpp::Named("fileIO") = timeFileIO,
             Rcpp::Named("compSigThresh") = timeComputeSigThreshold,
-            Rcpp::Named("compSigInt") = timeComputeSigIntervals,
-            Rcpp::Named("peakMemUsage") = peakMemoryUsageInBytes);
+            Rcpp::Named("compSigInt") = timeComputeSigIntervals);
+//             Rcpp::Named("peakMemUsage") = peakMemoryUsageInBytes);
     return timingList;
 }
 
@@ -1825,9 +2088,12 @@ Rcpp::List main_fastcmh2(Rcpp::String xfilenameR,
     try {
         //here will change to EXIT_SUCCESS, if there is success
         fastcmh_SUCCESS = computeFastCMH(xfilenameCpp, yfilenameCpp, cfilenameCpp, alphaval, Lmaxlonglong);
-    } catch (const std::exception&){
+    } catch(std::exception &ex) {	
+        forward_exception_to_r(ex);
 //         return EXIT_FAILURE;
 //         Do nothing
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
     }
 
     //create an empty returnList, which will be modified below
