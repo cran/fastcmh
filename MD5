@@ -1,4 +1,4 @@
-055604bd2ed7ccc4efa11f3000b3e2ca *DESCRIPTION
+9b9907532dd96a7de0f9e5b2ea018a66 *DESCRIPTION
 843e507a021057c0692ab8dec7dd813c *NAMESPACE
 d5187b01ecef65510c2fd11e6bd9b110 *R/RcppExports.R
 554e64a18d940b3b078c72cd24afa83a *R/demofastcmh.R
@@ -14,9 +14,9 @@ f5fc35264a3f68ed53c97cc1c7a17094 *man/demofastcmh.Rd
 0a3336ad6c5bdab99d7e0ec9cc1c8dc0 *man/makefastcmhdata.Rd
 5d90b9738179d4d7b0f26e23b36933c3 *man/runfastcmh.Rd
 f50d8b9e382d41607d99cd326410cc8d *src/RcppExports.cpp
-e295acd510d5468586fc9d96cd0a3f28 *src/fastcmh_cpp.cpp
+a489f13a84dfc4b19766e17e4f88c803 *src/fastcmh_cpp.cpp
 9a1f5b7125fbe5a76e75bbc440700e19 *src/fastcmh_cpp.h
-312c48f83ac6d7945a2fd5caa7d81586 *src/fdr.cpp
+34c0e419655840798f6f02d863632371 *src/fdr.cpp
 9e4c9ae1ff9393839de9313f7f909637 *src/fdr.h
 7feb5cbda6586b7c99521d6aa405433f *src/filterIntervals.cpp
 bf26ab51a68ef09bac940ac07f8c7ed4 *src/filterIntervals.h

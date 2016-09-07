@@ -171,27 +171,34 @@ std::vector<double> fdrPval;
 
 
 
-
-template <typename T>
-string ToString(T val)
+// http://stackoverflow.com/questions/12975341/to-string-is-not-a-member-of-std-says-g
+template < typename T > std::string AnotherToString( const T& num )
 {
-    return std::to_string(val);
+    std::ostringstream ss;
+    ss << num ;
+    return ss.str() ;
+}
+
+// template <typename T>
+// string ToString(T val)
+// {
+//     return std::to_string(val);
+// }
 //    //previous method
 //     stringstream stream;
 //     stream << val;
 //     return stream.str();
-}
 
 //need to make my own to_string, since it is only part of C++11
 //but now using C++11
-string my_to_string(int i){
-    return std::to_string(i);
+// string my_to_string(int i){
+//     return std::to_string(i);
+// }
 //    //prvious method
 //     stringstream ss;
 //     ss << i;
 //     string str = ss.str();
 //     return(str);
-}
 
 
 
@@ -358,29 +365,29 @@ void profileCode(){
 
     timeExecution = (t_end - t_init)/ CLOCKS_PER_SEC;
     timingString.append("Total execution time: " +
-            ToString(timeExecution) + " (s).\n");
+            AnotherToString(timeExecution) + " (s).\n");
 
     timeInitialisation = time_initialisation;
     timingString.append("\tInitialisation time: " +
-            ToString(timeInitialisation) + " (s).\n");
+            AnotherToString(timeInitialisation) + " (s).\n");
     
     timeFileIO = time_IO;
     timingString.append("\tFile I/O time: " + 
-            ToString(timeFileIO) + " (s).\n");
+            AnotherToString(timeFileIO) + " (s).\n");
 
     timeComputeSigThreshold = time_comp_threshold;
     timingString.append("\tTime to compute corrected significance threshold: " +
-            ToString(timeComputeSigThreshold) + " (s).\n");
+            AnotherToString(timeComputeSigThreshold) + " (s).\n");
 
     timeComputeSigIntervals = time_comp_significant_intervals;
     timingString.append("\tTime to find significant intervals: " +
-            ToString(timeComputeSigIntervals) + " (s).\n");
+            AnotherToString(timeComputeSigIntervals) + " (s).\n");
 
 
 // 	peak_memory = measurePeakMemory();
 //     peakMemoryUsageInBytes  = measurePeakMemory();
     timingString.append("\tPeak memory usage: " +
-            ToString(peakMemoryUsageInBytes) + " (bytes).\n");
+            AnotherToString(peakMemoryUsageInBytes) + " (bytes).\n");
     
 }
 
@@ -1060,7 +1067,7 @@ void find_significant_intervals(){
 	// Report number of significant intervals found
 
     summaryString.append( "Number of significantly associated intervals found: " +
-            ToString(n_significant_intervals)  +
+            AnotherToString(n_significant_intervals)  +
             "\n");
 }
 
@@ -1187,18 +1194,18 @@ void output_significance_threshold(){
     summaryString.append("DATASET CHARACTERISTICS:\n" );
 
     summaryString.append("\tN = " + 
-            ToString(N) +   
+            AnotherToString(N) +   
             "\tn = " + 
-            ToString(n) +   
+            AnotherToString(n) +   
             "\tL = " + 
-            ToString(L) +
+            AnotherToString(L) +
             "\n");
 
 	for(k=0; k<K; k++) {
-        summaryString.append("\tN[" +  ToString(k) + "] = " + 
-                ToString(Nt[k]) +   
-                ", \tn[" +  ToString(k) + "] = " +
-                ToString(nt[k]) +   
+        summaryString.append("\tN[" +  AnotherToString(k) + "] = " + 
+                AnotherToString(Nt[k]) +   
+                ", \tn[" +  AnotherToString(k) + "] = " +
+                AnotherToString(nt[k]) +   
                 "\n");
     }
         
@@ -1207,28 +1214,28 @@ void output_significance_threshold(){
 	// Number of intervals processed, proportion of intervals pruned
     double computedProcessed = ((double)(200*n_intervals_processed))/(L*(L+1));
     summaryString.append("Intervals processed: " +
-            ToString(n_intervals_processed) + 
-            "(" + ToString(computedProcessed) + " of total)\n");
+            AnotherToString(n_intervals_processed) + 
+            "(" + AnotherToString(computedProcessed) + " of total)\n");
 
     summaryString.append("Maximum testable interval length: " + 
-            ToString(l+1) );
+            AnotherToString(l+1) );
 
 	if(L_max==0){
         summaryString.append("Maximum interval length to be processed: unlimited\n");
     } else {
         summaryString.append("Maximum interval length to be processed: " + 
-                ToString(L_max) + "\n");
+                AnotherToString(L_max) + "\n");
     }
         
     summaryString.append("Last testability threshold: " +
-            ToString(pth) + "\n");
+            AnotherToString(pth) + "\n");
 
     summaryString.append("Number of testable intervals: " +
-            ToString(m) + "\n");
+            AnotherToString(m) + "\n");
 
     summaryString.append("Corrected significance threshold at level " +
-            ToString(alpha) + ":" + 
-            ToString(delta_opt) + "\n");
+            AnotherToString(alpha) + ":" + 
+            AnotherToString(delta_opt) + "\n");
 }
 
 /* Wrapper function that encapsulates the functionality required to find the corrected significance threshold */
@@ -1440,9 +1447,9 @@ int read_labels_file(char *labels_file){
     try {
         if(i != N){
                 string message = "Error in function read_labels_file: incorrect number of labels read. Read ";
-            message.append(my_to_string(i));
+            message.append(AnotherToString(i));
             message.append(", correct number ");
-            message.append(my_to_string(N));
+            message.append(AnotherToString(N));
             message.append("\n");
             throw std::runtime_error(message);
         }
@@ -1787,9 +1794,9 @@ int read_covariates_file(char *covariates_file){
     try {
         if(i != N){
             string message = "Error in function read_covariates_file: incorrect number of observations per table read. Total N ";
-            message.append(my_to_string(N));
+            message.append(AnotherToString(N));
             message.append(", Accumulated N in covariates file ");
-            message.append(my_to_string(i));
+            message.append(AnotherToString(i));
             message.append("\n");
             throw std::runtime_error(message);
         }

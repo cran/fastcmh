@@ -74,7 +74,12 @@ double computeHarmonic (long long n){
 //computes lower, because later will take inverse and we want approximation to be larger
 double computeApproxHarmonicLower(long long n){
     const double GAMMA = 0.577215664901532;
-    double lower = (double) 1/ (2*n + 1) + log(n) + GAMMA;
+    //to get rid of ambiguity error, casting long long to double
+    //previously:
+    //double lower = (double) 1/ (2*n + 1) + log(n) + GAMMA;
+    //now:
+    double nDouble = (double) n ;
+    double lower = 1 / (2*nDouble + 1) + log(nDouble) + GAMMA;
     return lower;
 }
 
