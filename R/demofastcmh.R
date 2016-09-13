@@ -138,7 +138,7 @@ demofastcmh <- function(saveToFolder=FALSE, folder=NULL){
         cat("\n")
         cat("Step 2: Now running fastcmh, and saving results to list\n")
         cat("**(Run command)**\n")
-        cat("> fastcmhresults <- runfastcmh(folder=/data/, saveToFile=FALSE\")\n\n", sep="")
+        cat("> fastcmhresults <- runfastcmh(folder=/data/, saveToFile=FALSE)\n\n", sep="")
         fastcmhresults <- runfastcmh(folder="/data/", saveToFile=FALSE)
         readkey();
 
